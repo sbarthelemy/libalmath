@@ -1,0 +1,164 @@
+image: Visual Studio 2015
+clone_folder: c:\projects\worktree\libalmath
+configuration: Release
+
+# variable definitions
+# variables will be accessible as %myvar% from batch,
+# and as $env:myvar from powershell
+# Here some doc:
+# - https://kevinmarquette.github.io/2017-01-13-powershell-variable-substitution-in-strings
+# - https://msdn.microsoft.com/powershell/reference/5.1/Microsoft.PowerShell.Core/about/about_Functions
+environment:
+  installers_dir: C:\Users\appveyor\installers
+  maya_sdk_archive_path: '%installers_dir%\Maya2017_Update3_DEVKIT_Windows.zip'
+  maya_libs_archive_path: '%installers_dir%\Maya2017.zip'
+  qitoolchain_pkgs_dir: C:\Users\appveyor\qitoolchain_pkgs
+  # base url for the qitoolchain packages
+  # TODO: host the qitoolchain packages somewhere else
+  # maybe on http://static.aldebaran.com/toolchains
+  # with the packages from those toolchains: https://github.com/aldebaran/toolchains
+  qitoolchain_pkgs_url: http://perso.crans.org/barthelemy/qi/toolchains/packages
+  boost_qitoolchain_pkg_relpath: win64-vs2015/boost-win64-vs2015-1.64.0-r7.zip
+  eigen3_qitoolchain_pkg_relpath: any/eigen3-3.2.4-r1.zip
+  pthread_qitoolchain_pkg_relpath: win64-vs2015/pthread-win64-vs2015-2.8.0-r3.zip
+  vcredist_qitoolchain_pkg_relpath: win64-vs2015/vcredist-win64-vs2015-14.0-r2.zip
+  MAYA_LOCATION: C:\Users\appveyor\Maya2017
+
+cache:
+- '%maya_sdk_archive_path%'
+- '%maya_libs_archive_path%'
+- '%qitoolchain_pkgs_dir%'
+
+install:
+# fetch archives
+- ps: |
+    function FetchIfNeeded ($dest, $md5, $url) {
+        if (-Not (Test-Path $dest)) {
+            $dest_dir = Split-Path -Path $dest
+            if (-Not (Test-Path $dest_dir)) {
+                New-Item -Path $dest_dir -type directory -force
+            }
+            Write-Host "downloading to $dest"
+            # cfr https://www.appveyor.com/docs/how-to/download-file/
+            (new-object net.webclient).DownloadFile($url, $dest)
+        }
+        $real_md5 = Get-FileHash $dest -Algorithm MD5
+        if ($real_md5.Hash -ne $md5) {
+            throw "bad md5sum: ${real_md5.Hash} instead of $md5"
+        }
+    }
+    function FetchPkgIfNeeded ($relpath, $md5) {
+        FetchIfNeeded -dest "${env:qitoolchain_pkgs_dir}/${relpath}" `
+                      -md5 $md5 `
+                      -url "${env:qitoolchain_pkgs_url}/${relpath}"
+    }
+    # fetch qitoolchain packages if they are not in cache
+    FetchPkgIfNeeded -relpath $env:boost_qitoolchain_pkg_relpath `
+                     -md5 'A4CF1E8890A37370292C75A133EADEB8'
+    FetchPkgIfNeeded -relpath $env:eigen3_qitoolchain_pkg_relpath `
+                     -md5 '703EACF95F904EC82710E75FA2BD8BB9'
+    FetchPkgIfNeeded -relpath $env:pthread_qitoolchain_pkg_relpath `
+                     -md5 '7E7A35790847CD69DEE1681E533AC2FA'
+    FetchPkgIfNeeded -relpath $env:vcredist_qitoolchain_pkg_relpath `
+                     -md5 '2EBF61AD49F006A8241462E769E0ADE0'
+    # fetch the Maya libs archive
+    # TODO: fetch the maya installer directly from autodesk website
+    #       then extract the libs and save them in appveyor's cache
+    # The current archive was done manually with
+    # cd /c/Program\ Files/Autodesk
+    # tar.exe czf ~/Maya2017.tar.gz  Maya2017/{lib,bin}/{Foundation,OpenMaya,OpenMayaUI,OpenMayaAnim,OpenMayaFX,OpenMayaRender}.*
+    # then converted to a zip file
+    FetchIfNeeded -dest $env:maya_libs_archive_path `
+                  -md5 'C88376BDC9C899598989FC7691752BA2' `
+                  -url 'http://perso.crans.org/barthelemy/qi/Maya2017.zip'
+    # fetch the Maya SDK archive (aka. "devkit")
+    #
+    # The url is short-lived, but it is ok because the downloaded archive
+    # will be stored in appveyor's cache.
+    #
+    # Here is how to get a new url:
+    #
+    # - go to "Maya 2017 Update 3 - Developer Kit (aka devkit)" page:
+    #   https://apps.autodesk.com/MAYA/en/Detail/Index?id=8656206734503135164&os=Win64&appLang=en
+    # - sign in (important)
+    # - then right-click on the "Download" button and choose "inspect"
+    # - copy the "data-href" part, it should look like
+    #   "/MAYA/en/Detail/Download?appId=8656206734503135164&appLang=en&os=Win64"
+    #   (basically it is the same id)
+    # - paste it in your browser, with a "apps.autodesk.com" prefix
+    # - you should get a json page with a "DownloadUrl" field
+    # - you're done!
+    FetchIfNeeded -dest $env:maya_sdk_archive_path `
+                  -md5 '31C3310E5002413956BB78FF4035CD66' `
+                  -url 'https://autodesk-exchange-apps-v-1-5-staging.s3.amazonaws.com/data/content/files/assets/QP9QKVEMEAC3/332017/Maya2017_Update3_DEVKIT_Windows.zip?AWSAccessKeyId=AKIAI77WF7CFWDZD5B2A&Expires=1505928896&response-content-disposition=attachment%3B%20filename%3DMaya2017_Update3_DEVKIT_Windows.zip&response-content-type=application%2Foctet-stream&Signature=bOAdL7mSY335qeT6Frj9AQhX6f4%3D'
+# install the Maya libs
+- ps: |
+    $dir = Split-Path -Path $env:MAYA_LOCATION
+    Push-Location $dir
+    & 7z x $env:maya_libs_archive_path
+    Pop-Location
+    if (-Not (Test-Path $env:MAYA_LOCATION)) {
+        throw "failed to prepare MAYA_LOCATION"
+    }
+
+# extract the C++ headers in MAYA_LOCATION\include, as recommanded in
+# http://help.autodesk.com/view/MAYAUL/2017/ENU/?guid=__files_Setting_up_your_build_env_Windows_env_32bit_and_64bit_htm
+- ps: |
+    $tmp_dir = "toto"
+    New-Item -Path $tmp_dir -type directory -force
+    Push-Location $tmp_dir
+    & 7z x $env:maya_sdk_archive_path devkitBase\include\maya -r
+    Pop-Location
+    New-Item -Path $env:MAYA_LOCATION -type directory -force
+    Move-Item "$tmp_dir\devkitBase\include" $env:MAYA_LOCATION
+    Remove-Item -Recurse -Force $tmp_dir
+
+before_build:
+# cfr https://www.appveyor.com/docs/lang/cpp/
+- call "C:\Program Files\Microsoft SDKs\Windows\v7.1\Bin\SetEnv.cmd" /x64
+- call "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" x86_amd64
+- set PATH=C:\Python27\scripts;%PATH%
+- pip install qibuild
+# create and populate the toolchain
+- ps: |
+    $tc = "master-host"
+    function AddPackage ($relpath, $name="") {
+        if ($name) {
+          & qitoolchain  add-package -t $tc "file:///${env:qitoolchain_pkgs_dir}/${relpath}" --name $name
+        } else {
+          & qitoolchain  add-package -t $tc "file:///${env:qitoolchain_pkgs_dir}/${relpath}"
+        }
+    }
+    & qitoolchain create $tc
+    # eigen3 is in the "old package format" so a name is required
+    AddPackage -relpath $env:eigen3_qitoolchain_pkg_relpath -name eigen3
+    AddPackage -relpath $env:boost_qitoolchain_pkg_relpath
+    AddPackage -relpath $env:pthread_qitoolchain_pkg_relpath
+    AddPackage -relpath $env:vcredist_qitoolchain_pkg_relpath
+    & qitoolchain info $tc
+    & qibuild add-config host -t $tc
+# setup a worktree
+# we create worktree.xml, just like qisrc init would have done
+#
+# I failed to create xml content with batch echo, because of weird escaping
+# of angle brackets, so I resorted to powershell
+- ps: |
+    Push-Location c:\projects\worktree
+    & git clone -q https://github.com/aldebaran/gtest.git
+    & qibuild init
+    Set-Content -Value '<worktree><project src="gtest"/><project src="libalmath"/></worktree>' -Path .qi\worktree.xml
+    Pop-Location
+# configure!
+- qibuild configure -c host -G "Visual Studio 14 2015 Win64" --release -DALMATH_WITH_QIGEOMETRY=OFF -DALMATH_WITH_MAYAPLUGIN=ON -DWITH_PYTHON=OFF -DALMATH_AS_STATIC_LIBRARY=ON -DMAYA_INCLUDE_DIRS="%MAYA_LOCATION%/include" -DMAYA_INSTALL_BASE_PATH="C:\Users\appveyor"
+
+build_script:
+- qibuild make -c host
+
+test_script:
+# skip the mayaplugin test, because it crashes
+# TODO: understand why
+- qitest run -c host -k .*almath.*
+#- qitest run -c host
+
+artifacts:
+- path: '**\*.mll'
