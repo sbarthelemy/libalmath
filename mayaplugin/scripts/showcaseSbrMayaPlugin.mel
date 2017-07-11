@@ -1,0 +1,26 @@
+global proc int showcaseSBRMayaPlugin() {
+
+  // start from a fresh scene
+  file -f -new;
+
+  string $mesh_prefix = getAlmodelutilsPrefixPath();
+
+  // MFileObject does not semm to work on Windows, so dirmap is uselessOB
+  //dirmap -mapDirectory "/share" ($mesh_prefix + "/share");
+  //print(`dirmap -gam`);
+
+  loadPlugin("SoftBankRoboticsMayaPlugin.mll");
+
+  loadSbrUrdf(getTestJulietteUrdfPath(),
+              "file:///", ("file:///" + $mesh_prefix));
+  addControllers();
+
+  string $anim_path = getAlposturePrefixPath() + "/share/naoqi/animation/Juliette/WakeUp.qianim";
+  importQiAnim($anim_path);
+  importQiAnim($anim_path);
+
+  // unload the plugin, so that visual studio can recompile it
+  unloadPlugin("SoftBankRoboticsMayaPlugin.mll");
+
+  return 0;
+}

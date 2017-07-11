@@ -1,0 +1,3 @@
+global proc string getTestJulietteUrdfPath() {
+  return "@CMAKE_CURRENT_SOURCE_DIR@/julietteY20MP201702.urdf";
+}

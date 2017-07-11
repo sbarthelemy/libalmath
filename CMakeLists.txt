@@ -24,6 +24,9 @@ option(ALMATH_WITH_QIGEOMETRY
 option(ALMATH_AS_STATIC_LIBRARY
   "if true, almath is built as a static library"
   OFF)
+option(ALMATH_WITH_MAYAPLUGIN
+  "if true, the maya plugin is built"
+  OFF)
 
 if (ALMATH_WITH_QIGEOMETRY)
   find_package(qilang-tools)
@@ -204,4 +207,7 @@ add_subdirectory(test)
 
 if(ALMATH_WITH_QIGEOMETRY)
   add_subdirectory(geometry_module)
+endif()
+if(ALMATH_WITH_MAYAPLUGIN)
+  add_subdirectory(mayaplugin)
 endif()
