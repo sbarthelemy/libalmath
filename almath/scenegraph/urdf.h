@@ -64,6 +64,7 @@ class RobotTreeP;
 }
 
 typedef std::array<double, 3> Array3d;
+typedef std::array<double, 4> Array4d;
 
 inline bool is_zero(const Array3d &a) {
   return (a[0] == 0) && (a[1] == 0) && (a[2] == 0);
@@ -77,6 +78,9 @@ class Pose;
 
 // return the name attribute of a joint or link element
 ALMATH_API std::string name(const ptree &pt);
+inline std::string get_name(const ptree &pt) {
+  return name(pt);
+}
 
 // return the parent link of a joint element
 ALMATH_API std::string parent_link(const ptree &pt);
@@ -314,6 +318,7 @@ struct ScalarArrayTranslator {
 };
 
 using Array3dTranslator = ScalarArrayTranslator<double, 3>;
+using Array4dTranslator = ScalarArrayTranslator<double, 4>;
 
 // Models an URDF pose/transform ("origin" XML element)
 class ALMATH_API Pose {
@@ -370,7 +375,7 @@ class ALMATH_API Joint {
 
   // Return the (lower, upper) limits pair.
   //
-  // If both limits are missing, the pair is uninitialized
+  // If both limits are missing, the returned value is uninitialized
   // If one of them is missing, it is defaulted to 0.
   // This behavior is slightly different from the
   // http://wiki.ros.org/urdf/XML/joint spec.
@@ -534,7 +539,79 @@ class ALMATH_API UrdfDotPrinterVisitor : public RobotTree::JointConstVisitor {
 
 ALMATH_API void put_name(ptree &pt, const std::string &name);
 
+namespace material {
+
+// TODO: doc
+template <typename Scalar>
+typename std::enable_if<std::is_floating_point<Scalar>::value>::type
+put_color(ptree &pt, const std::array<Scalar, 4> &rgba) {
+  // TODO check rgba values are in [0, 1]
+  pt.put("color.<xmlattr>.rgba", rgba, ScalarArrayTranslator<Scalar, 4>());
+}
+
+// TODO: get_color
+// TODO: put/get _texture
+
+}
+
+namespace link {
+
+ALMATH_API bool is_link(const ptree::value_type &val);
+
+template <typename Scalar>
+ptree make_inertial(Scalar mass,
+                    Scalar ixx,
+                    Scalar ixy,
+                    Scalar ixz,
+                    Scalar iyy,
+                    Scalar iyz,
+                    Scalar izz) {
+  ptree inertial;
+  inertial.put("mass.<xmlattr>.value", mass);
+  inertial.put("inertia.<xmlattr>.ixx", ixx);
+  inertial.put("inertia.<xmlattr>.ixy", ixy);
+  inertial.put("inertia.<xmlattr>.ixz", ixz);
+  inertial.put("inertia.<xmlattr>.iyy", iyy);
+  inertial.put("inertia.<xmlattr>.iyz", iyz);
+  inertial.put("inertia.<xmlattr>.izz", izz);
+  return inertial;
+}
+
+template <typename Scalar>
+ptree &put_inertial(ptree &pt,
+                    Scalar mass,
+                    Scalar ixx,
+                    Scalar ixy,
+                    Scalar ixz,
+                    Scalar iyy,
+                    Scalar iyz,
+                    Scalar izz) {
+  auto inertial = make_inertial(mass, ixx, ixy, ixz, iyy, iyz, izz);
+  return pt.put_child("inertial", inertial);
+}
+
+}
+
 namespace robot {
+
+// return the range of link elements, in document order.
+inline auto get_links(const ptree &pt)
+-> boost::select_second_const_range<
+      decltype(boost::adaptors::filter(pt, link::is_link))> {
+  return boost::adaptors::values(
+             boost::adaptors::filter(pt, link::is_link));
+}
+inline auto get_links(ptree &pt)
+-> boost::select_second_mutable_range<
+      decltype(boost::adaptors::filter(pt, link::is_link))> {
+  auto kv = boost::adaptors::filter(pt, link::is_link);
+  return boost::adaptors::values(kv);
+}
+
+ALMATH_API ptree &add_link(ptree &pt, const std::string &name);
+ALMATH_API ptree &require_link(ptree &pt, const std::string &name);
+
+ALMATH_API ptree &add_joint(ptree &pt, const std::string &name);
 
 // Replace each mesh and texture filename by the result of applying op() to it.
 //
@@ -547,6 +624,7 @@ namespace robot {
 ALMATH_API void transform_filenames(
     ptree &robot, std::function<std::string(std::string)> op);
 }
+
 }
 }
 

@@ -935,7 +935,42 @@ void put_name(ptree &pt, const std::string &name) {
   pt.put("<xmlattr>.name", name);
 }
 
+// private
+ptree &add_named_child(ptree &parent, const std::string &path,
+                       const std::string &name) {
+  ptree child;
+  put_name(child, name);
+  return parent.add_child(path, child);
+}
+
+namespace link {
+
+bool is_link(const ptree::value_type &val) {
+  return val.first == "link";
+}
+
+}
+
 namespace robot {
+
+ptree &add_link(ptree &pt, const std::string &name) {
+  return add_named_child(pt, "link", name);
+}
+
+ptree &require_link(ptree &pt, const std::string &name) {
+  auto pred = [name](const ptree::value_type &val) {
+    return link::is_link(val) && (get_name(val.second) == name);
+  };
+  auto it = std::find_if(pt.begin(), pt.end(), pred);
+  if (it != pt.end())
+    return it->second;
+  return add_link(pt, name);
+}
+
+ptree &add_joint(ptree &pt, const std::string &name) {
+  return add_named_child(pt, "joint", name);
+}
+
 void transform_filenames(
     ptree &robot, std::function<std::string(std::string)> op) {
   // parent can be a texture or a mesh element
