@@ -136,6 +136,7 @@ set(ALMATH_H
     almath/scenegraph/scenebuilder.h
     almath/scenegraph/urdf.h
     almath/scenegraph/urdfeigen.h
+    almath/scenegraph/urdfrigidbodysystembuilder.h
     almath/scenegraph/urdfrigidbodysystemtraverser.h
     almath/tools/almathio.h
 )

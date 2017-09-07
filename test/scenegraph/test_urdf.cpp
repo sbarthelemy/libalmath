@@ -5,6 +5,7 @@
 
 #include <almath/scenegraph/urdf.h>
 #include <almath/scenegraph/urdfrigidbodysystemtraverser.h>
+#include <almath/scenegraph/urdfrigidbodysystembuilder.h>
 #include <boost/function/function2.hpp>
 #include <gtest/gtest.h>
 #include <boost/filesystem/fstream.hpp>
@@ -1439,4 +1440,9 @@ TEST_F(RigidBodySystemBuilderTest, buildFromUrdf_link) {
   EXPECT_EQ(MyBuilder::Vector3::Zero(), b.links[0].body_mass.center_of_mass);
   EXPECT_EQ(MyBuilder::Matrix3::Ones(),
             b.links[0].body_mass.rotational_inertia);
+}
+
+TEST(UrdfRigidBodySystemBuilderTest, buildFromUrdf_link) {
+  UrdfRigidBodySystemBuilder<double> builder;
+  // TODO: test something here.
 }
