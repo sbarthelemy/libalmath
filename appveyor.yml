@@ -11,12 +11,7 @@ configuration: Release
 environment:
   maya_libs_archive_path: '%APPVEYOR_BUILD_FOLDER%\mayasdk\maya2017-libs-win64.zip'
   maya_headers_archive_path: '%APPVEYOR_BUILD_FOLDER%\mayasdk\maya2017-headers-win64.zip'
-  # "local mirror" when the packages are available using git and/or git-lfs
-  qitoolchain_pkgs_url: 'file:///%APPVEYOR_BUILD_FOLDER%/toolchains/packages'
-  boost_qitoolchain_pkg_relpath: win64-vs2015/boost-win64-vs2015-1.64.0-r7.zip
-  eigen3_qitoolchain_pkg_relpath: any/eigen3-3.2.4-r1.zip
-  pthread_qitoolchain_pkg_relpath: win64-vs2015/pthread-win64-vs2015-2.8.0-r3.zip
-  vcredist_qitoolchain_pkg_relpath: win64-vs2015/vcredist-win64-vs2015-14.0-r2.zip
+  qitoolchain_feed_url: 'file:///%APPVEYOR_BUILD_FOLDER%/toolchains/feeds/win64-vs2015.xml'
   MAYA_LOCATION: C:\Users\appveyor\Maya2017
 
 install:
@@ -38,25 +33,12 @@ before_build:
 - call "C:\Program Files\Microsoft SDKs\Windows\v7.1\Bin\SetEnv.cmd" /x64
 - call "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" x86_amd64
 - set PATH=C:\Python27\scripts;%PATH%
-- git clone -q --depth 1 https://github.com/aldebaran/qibuild.git --branch master
+- git clone -q --depth 1 https://github.com/sbarthelemy/qibuild.git --branch master
 - pip install ./qibuild
 # create and populate the toolchain
 - ps: |
     $tc = "master-host"
-    function AddPackage ($relpath, $name="") {
-        $prefix = "${env:qitoolchain_pkgs_url}"
-        if ($name) {
-          & qitoolchain  add-package -t $tc "${prefix}/${relpath}" --name $name
-        } else {
-          & qitoolchain  add-package -t $tc "${prefix}/${relpath}"
-        }
-    }
-    & qitoolchain create $tc
-    # eigen3 is in the "old package format" so a name is required
-    AddPackage -relpath $env:eigen3_qitoolchain_pkg_relpath -name eigen3
-    AddPackage -relpath $env:boost_qitoolchain_pkg_relpath
-    AddPackage -relpath $env:pthread_qitoolchain_pkg_relpath
-    AddPackage -relpath $env:vcredist_qitoolchain_pkg_relpath
+    & qitoolchain create $tc ${env:qitoolchain_feed_url}
     & qitoolchain info $tc
     & qibuild add-config host -t $tc
 # setup a worktree
