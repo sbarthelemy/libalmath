@@ -14,10 +14,12 @@ environment:
   maya_libs_archive_path: '%installers_dir%\Maya2017.zip'
   qitoolchain_pkgs_dir: C:\Users\appveyor\qitoolchain_pkgs
   # base url for the qitoolchain packages
-  # TODO: host the qitoolchain packages somewhere else
-  # maybe on http://static.aldebaran.com/toolchains
-  # with the packages from those toolchains: https://github.com/aldebaran/toolchains
-  qitoolchain_pkgs_url: http://perso.crans.org/barthelemy/qi/toolchains/packages
+  # official, but outdated mirror (to use with these feeds: https://github.com/aldebaran/toolchains)
+  ##qitoolchain_pkgs_url: http://static.aldebaran.com/toolchains
+  # test mirror:
+  ##qitoolchain_pkgs_url: http://perso.crans.org/barthelemy/qi/toolchains/packages
+  # "local mirror" when the packages are available using git and/or git-lfs
+  qitoolchain_pkgs_url: 'file:///%APPVEYOR_BUILD_FOLDER%/toolchains/packages'
   boost_qitoolchain_pkg_relpath: win64-vs2015/boost-win64-vs2015-1.64.0-r7.zip
   eigen3_qitoolchain_pkg_relpath: any/eigen3-3.2.4-r1.zip
   pthread_qitoolchain_pkg_relpath: win64-vs2015/pthread-win64-vs2015-2.8.0-r3.zip
@@ -53,14 +55,14 @@ install:
                       -url "${env:qitoolchain_pkgs_url}/${relpath}"
     }
     # fetch qitoolchain packages if they are not in cache
-    FetchPkgIfNeeded -relpath $env:boost_qitoolchain_pkg_relpath `
-                     -md5 'A4CF1E8890A37370292C75A133EADEB8'
-    FetchPkgIfNeeded -relpath $env:eigen3_qitoolchain_pkg_relpath `
-                     -md5 '703EACF95F904EC82710E75FA2BD8BB9'
-    FetchPkgIfNeeded -relpath $env:pthread_qitoolchain_pkg_relpath `
-                     -md5 '7E7A35790847CD69DEE1681E533AC2FA'
-    FetchPkgIfNeeded -relpath $env:vcredist_qitoolchain_pkg_relpath `
-                     -md5 '2EBF61AD49F006A8241462E769E0ADE0'
+    ##FetchPkgIfNeeded -relpath $env:boost_qitoolchain_pkg_relpath `
+    ##                 -md5 'A4CF1E8890A37370292C75A133EADEB8'
+    ##FetchPkgIfNeeded -relpath $env:eigen3_qitoolchain_pkg_relpath `
+    ##                 -md5 '703EACF95F904EC82710E75FA2BD8BB9'
+    ##FetchPkgIfNeeded -relpath $env:pthread_qitoolchain_pkg_relpath `
+    ##                 -md5 '7E7A35790847CD69DEE1681E533AC2FA'
+    ##FetchPkgIfNeeded -relpath $env:vcredist_qitoolchain_pkg_relpath `
+    ##                 -md5 '2EBF61AD49F006A8241462E769E0ADE0'
     # fetch the Maya libs archive
     # TODO: fetch the maya installer directly from autodesk website
     #       then extract the libs and save them in appveyor's cache
@@ -123,10 +125,15 @@ before_build:
 - ps: |
     $tc = "master-host"
     function AddPackage ($relpath, $name="") {
+        # use this prefix if the packages were downloaded into the appveyor cache.
+        ##$prefix = "file:///${env:qitoolchain_pkgs_dir}"
+
+        # use this prefix to get the packages directly from the mirror.
+        $prefix = "${env:qitoolchain_pkgs_url}"
         if ($name) {
-          & qitoolchain  add-package -t $tc "file:///${env:qitoolchain_pkgs_dir}/${relpath}" --name $name
+          & qitoolchain  add-package -t $tc "${prefix}/${relpath}" --name $name
         } else {
-          & qitoolchain  add-package -t $tc "file:///${env:qitoolchain_pkgs_dir}/${relpath}"
+          & qitoolchain  add-package -t $tc "${prefix}/${relpath}"
         }
     }
     & qitoolchain create $tc
