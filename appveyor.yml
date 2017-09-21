@@ -38,7 +38,8 @@ before_build:
 - call "C:\Program Files\Microsoft SDKs\Windows\v7.1\Bin\SetEnv.cmd" /x64
 - call "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" x86_amd64
 - set PATH=C:\Python27\scripts;%PATH%
-- pip install qibuild
+- git clone -q --depth 1 https://github.com/aldebaran/qibuild.git --branch master
+- pip install ./qibuild
 # create and populate the toolchain
 - ps: |
     $tc = "master-host"
