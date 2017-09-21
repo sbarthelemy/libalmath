@@ -1,0 +1,19 @@
+doitall:
+  script:
+    - apt-get update -qy
+    - apt-get install -y build-essential cmake python-pip
+    - git submodule update --init --recursive
+    - pip install ./deps/qibuild
+    - ls deps/toolchains
+    - ls -lR deps/toolchains
+    - cat deps/toolchains/packages/win64-vs2015/boost-win64-vs2015-1.64.0-r7.zip
+    - pwd
+    - cd deps/toolchains/ && git lfs get
+    - pwd
+    - cat deps/toolchains/packages/win64-vs2015/boost-win64-vs2015-1.64.0-r7.zip
+    - qitoolchain create host "file:////${CI_PROJECT_DIR}/deps/toolchains/feeds/win64-vs2015.xml"
+    - qitoolchain info host
+    - qibuild add-config host -t host
+    - qibuild configure -c host -DALMATH_WITH_QIGEOMETRY=OFF -DWITH_PYTHON=OFF
+    - qibuild make
+    - qitest run
