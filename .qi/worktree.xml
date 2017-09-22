@@ -1,0 +1,5 @@
+<worktree>
+    <project src="deps/gtest"/>
+    <project src="."/>
+</worktree>
+

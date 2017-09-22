@@ -9,9 +9,9 @@ configuration: Release
 # - https://kevinmarquette.github.io/2017-01-13-powershell-variable-substitution-in-strings
 # - https://msdn.microsoft.com/powershell/reference/5.1/Microsoft.PowerShell.Core/about/about_Functions
 environment:
-  maya_libs_archive_path: '%APPVEYOR_BUILD_FOLDER%\mayasdk\maya2017-libs-win64.zip'
-  maya_headers_archive_path: '%APPVEYOR_BUILD_FOLDER%\mayasdk\maya2017-headers-win64.zip'
-  qitoolchain_feed_url: 'file:///%APPVEYOR_BUILD_FOLDER%/toolchains/feeds/win64-vs2015.xml'
+  maya_libs_archive_path: '%APPVEYOR_BUILD_FOLDER%\deps\mayasdk\maya2017-libs-win64.zip'
+  maya_headers_archive_path: '%APPVEYOR_BUILD_FOLDER%\deps\mayasdk\maya2017-headers-win64.zip'
+  qitoolchain_feed_url: 'file:///%APPVEYOR_BUILD_FOLDER%/deps/toolchains/feeds/win64-vs2015.xml'
   MAYA_LOCATION: C:\Users\appveyor\Maya2017
 
 install:
@@ -34,8 +34,7 @@ before_build:
 - call "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" x86_amd64
 - set PATH=C:\Python27\scripts;%PATH%
 - git submodule update --init --recursive
-- git clone -q --depth 1 https://github.com/sbarthelemy/qibuild.git --branch master
-- pip install ./qibuild
+- pip install ./deps/qibuild
 # create and populate the toolchain
 - ps: |
     $tc = "master-host"
@@ -47,12 +46,6 @@ before_build:
 #
 # I failed to create xml content with batch echo, because of weird escaping
 # of angle brackets, so I resorted to powershell
-- ps: |
-    Push-Location c:\projects\worktree
-    & git clone -q https://github.com/aldebaran/gtest.git
-    & qibuild init
-    Set-Content -Value '<worktree><project src="gtest"/><project src="libalmath"/></worktree>' -Path .qi\worktree.xml
-    Pop-Location
 # configure!
 - qibuild configure -c host -G "Visual Studio 14 2015 Win64" --release -DALMATH_WITH_QIGEOMETRY=OFF -DALMATH_WITH_MAYAPLUGIN=ON -DWITH_PYTHON=OFF -DALMATH_AS_STATIC_LIBRARY=ON -DMAYA_INCLUDE_DIRS="%MAYA_LOCATION%/include" -DMAYA_INSTALL_BASE_PATH="C:\Users\appveyor"
 

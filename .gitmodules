@@ -1,3 +1,9 @@
-[submodule "toolchains"]
-	path = toolchains
+[submodule "deps/toolchains"]
+	path = deps/toolchains
 	url = https://github.com/sbarthelemy/toolchains.git
+[submodule "deps/gtest"]
+	path = deps/gtest
+	url = https://github.com/aldebaran/gtest.git
+[submodule "deps/qibuild"]
+	path = deps/qibuild
+	url = https://github.com/sbarthelemy/qibuild.git
