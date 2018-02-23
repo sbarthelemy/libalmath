@@ -4,6 +4,7 @@
  */
 
 #include <almath/scenegraph/gltf.h>
+#include <almath/scenegraph/gltfrigidbodysystembuilder.h>
 #include <gtest/gtest.h>
 #include <boost/function_output_iterator.hpp>
 #include <boost/predef.h>
@@ -235,4 +236,10 @@ TEST(ALMathglTFTest, simple_scene) {
 
   std::ofstream os("/tmp/toto.gltf");
   doc.writeJSON(os);
+}
+
+TEST(GltfRigidBodySystemBuilder, toto) {
+    GltfRigidBodySystemBuilder builder;
+
+    // TODO: test something here.
 }
